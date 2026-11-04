@@ -44,6 +44,12 @@ class ManytaskDeadlinesType(Enum):
     INTERPOLATE = "interpolate"
 
 
+class ManytaskReviewerMode(Enum):
+    NONE = "none"  # no review: passed tests mean accepted task, no reviewer column in the table
+    ANY = "any"  # reviewer is picked from all course reviewers in round-robin order
+    CONCRETE = "concrete"  # reviewer is a fixed user, set by `reviewer_login`
+
+
 class ManytaskTaskConfig(CustomBaseModel):
     task: str
 
@@ -58,9 +64,27 @@ class ManytaskTaskConfig(CustomBaseModel):
     # Note: use Optional/Union[...] instead of ... | None as pydantic does not support | in older python versions
     url: Optional[AnyUrl] = None
 
+    reviewer_mode: ManytaskReviewerMode = ManytaskReviewerMode.ANY
+    reviewer_login: Optional[str] = None  # required for `concrete` reviewer_mode only
+
     @property
     def name(self) -> str:
         return self.task
+    
+    @property
+    def has_reviewer(self) -> bool:
+        return self.reviewer_mode != ManytaskReviewerMode.NONE
+
+    @model_validator(mode="after")
+    def check_reviewer_login(self) -> "ManytaskTaskConfig":
+        if self.reviewer_mode == ManytaskReviewerMode.CONCRETE and not self.reviewer_login:
+            raise ValueError(f"reviewer_login is required for `{ManytaskReviewerMode.CONCRETE.value}` reviewer_mode")
+        if self.reviewer_mode != ManytaskReviewerMode.CONCRETE and self.reviewer_login is not None:
+            raise ValueError(
+                f"reviewer_login is allowed for `{ManytaskReviewerMode.CONCRETE.value}` reviewer_mode only, "
+                f"got `{self.reviewer_mode.value}`"
+            )
+        return self
 
 
 class ManytaskGroupConfig(CustomBaseModel):
