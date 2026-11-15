@@ -1,3 +1,3 @@
 [submodule "checker/configs/manytask"]
 	path = checker/configs/manytask
-	url = git@github.com:ATP-Manytask/course-config.git
+	url = https://github.com/ATP-Manytask/course-config.git
